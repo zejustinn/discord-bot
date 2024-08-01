@@ -127,7 +127,7 @@ export default {
       ephemeral: true,
     })
 
-    if (interaction.channelId === GROUP_CONSOLE_TEXT_CHANNEL_ID) {
+    if (true) {
       switch (interaction.options._subcommand) {
         case 'criar':
           return await runCreateCommand(interaction, groupId, groups)
@@ -169,7 +169,7 @@ const runCreateCommand = async (interaction, groupId, groups) => {
 
   groupId.value = groupId.value === 99999 ? 1 : groupId.value + 1
 
-  const game = interaction.options._hoistedOptions.find(
+  const name = interaction.options._hoistedOptions.find(
     (option) => option.name === 'nome'
   ).value
   const memberQuantityAllowed = interaction.options._hoistedOptions.find(
@@ -178,16 +178,16 @@ const runCreateCommand = async (interaction, groupId, groups) => {
 
   const group = new Group(
     groupId.value,
+    name,
     'Not created yet',
     interaction.user.id,
     interaction.member.user.globalName,
-    game,
     memberQuantityAllowed
   )
 
   const channel = await interaction.guild.channels.create({
     parent: GROUP_CATEGORY_ID,
-    name: `${groupId.value}-${game.toUpperCase()}`,
+    name: `${groupId.value}-${name}`,
     type: ChannelType.GuildVoice,
   })
 
@@ -202,18 +202,22 @@ const runCreateCommand = async (interaction, groupId, groups) => {
       const ids = usersId.split(',')
       ids.forEach(async (id) => {
         const fixedId = id.replace(' ', '')
-        try {
-          const user = await interaction.guild.members.fetch(fixedId)
+        if (fixedId !== interaction.user.id) {
+          try {
+            const user = await interaction.guild.members.fetch(fixedId)
 
-          group.reservedPlaces.set(fixedId, user.user.globalName)
-        } catch {}
+            group.reservedPlaces.set(fixedId, user.user.globalName)
+          } catch {}
+        }
       })
     } else {
-      try {
-        const user = await interaction.guild.members.fetch(usersId)
+      if (usersId !== interaction.user.id) {
+        try {
+          const user = await interaction.guild.members.fetch(usersId)
 
-        group.reservedPlaces.set(usersId, user.user.globalName)
-      } catch {}
+          group.reservedPlaces.set(usersId, user.user.globalName)
+        } catch {}
+      }
     }
   }
 
@@ -312,15 +316,15 @@ const runUpdateCommand = async (interaction, groups) => {
     group.leaderName = newLeaderName
   }
 
-  const game = interaction.options._hoistedOptions.find(
+  const name = interaction.options._hoistedOptions.find(
     (option) => option.name === 'nome'
   )?.value
-  if (game) {
+  if (name) {
     await interaction.guild.channels.edit(interaction.member.voice.channel.id, {
-      name: `${group.id}-${game.toUpperCase()}`,
+      name: `${group.id}-${name}`,
     })
 
-    group.game = game
+    group.name = name
   }
 
   const memberQuantityAllowed = interaction.options._hoistedOptions.find(
@@ -328,7 +332,7 @@ const runUpdateCommand = async (interaction, groups) => {
   )?.value
   if (memberQuantityAllowed) group.memberQuantityAllowed = memberQuantityAllowed
 
-  if (!newLeaderId && !game && !memberQuantityAllowed) {
+  if (!newLeaderId && !name && !memberQuantityAllowed) {
     return await replyCommandInStandardWay(
       interaction,
       'Nada foi atualizado  😖, certifique-se de que usou o comando corretamente  🤔'
@@ -364,25 +368,24 @@ const runJoinCommand = async (interaction, groups) => {
       'Você não pode ingressar em um grupo que foi banido  🤡'
     )
 
-  if (!group.reservedPlaces.has(interaction.user.id)) {
+  if (
+    !group.reservedPlaces.has(interaction.user.id) &&
+    group.activeMembers.size === group.memberQuantityAllowed
+  )
+    return await replyCommandInStandardWay(
+      interaction,
+      'O grupo já está cheio  😖'
+    )
+
+  if (group.reservedPlaces.has(interaction.user.id)) {
     const userName = group.reservedPlaces.get(interaction.user.id)
     group.reservedPlaces.delete(interaction.user.id)
     group.activeMembers.set(interaction.user.id, userName)
-
-    if (group.activeMembers.size === group.memberQuantityAllowed)
-      return await replyCommandInStandardWay(
-        interaction,
-        'O grupo já está cheio  😖'
-      )
-  }
-
-  if (group.reservedPlaces.has(interaction.user.id))
-    group.reservedPlaces.delete(interaction.user.id)
-
-  group.activeMembers.set(
-    interaction.user.id,
-    interaction.member.user.globalName
-  )
+  } else
+    group.activeMembers.set(
+      interaction.user.id,
+      interaction.member.user.globalName
+    )
 
   const channel = await interaction.guild.channels.fetch(group.channelId)
   await interaction.member.voice.setChannel(channel)
@@ -523,12 +526,14 @@ const runReserveCommand = async (interaction, groups) => {
   const ids = usersId.split(',')
   ids.forEach(async (id) => {
     const fixedId = id.replace(' ', '')
-    try {
-      const user = await interaction.guild.members.fetch(fixedId)
+    if (fixedId !== interaction.user.id) {
+      try {
+        const user = await interaction.guild.members.fetch(fixedId)
 
-      group.reservedPlaces.set(fixedId, user.user.globalName)
-    } catch {
-      errors.push(fixedId)
+        group.reservedPlaces.set(fixedId, user.user.globalName)
+      } catch {
+        errors.push(fixedId)
+      }
     }
   })
 
@@ -537,8 +542,6 @@ const runReserveCommand = async (interaction, groups) => {
       interaction,
       `O usuário ${errors[0]} não foi localizado  🤔`
     )
-
-  console.log(errors, errors.length)
 
   if (errors.length !== 0) {
     if (errors.length === 1) {

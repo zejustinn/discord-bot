@@ -4,17 +4,17 @@ export default class Group {
   reservedPlaces = new Map()
   constructor(
     id,
+    name,
     channelId,
     leaderId,
     leaderName,
-    game,
     memberQuantityAllowed
   ) {
     this.id = id
+    this.name = name
     this.channelId = channelId
     this.leaderId = leaderId
     this.leaderName = leaderName
-    this.game = game
     this.memberQuantityAllowed = memberQuantityAllowed
     this.activeMembers.set(leaderId, leaderName)
   }
@@ -33,10 +33,10 @@ export default class Group {
   }
 
   getCollectionDetailString(title, collection) {
-    let collectionDetailString = `**${title}:** \n\`\`\``
+    let collectionDetailString = `**${title}** \n\`\`\`Nome: ID do usuário\n\n`
 
     collection.forEach((value, key) => {
-      collectionDetailString += `${value} | ID do usuário: ${key}\n`
+      collectionDetailString += `${value}: ${key}\n`
     })
 
     collectionDetailString += '```'
@@ -45,10 +45,13 @@ export default class Group {
   }
 
   getGroupDetailMessage() {
-    let membersDetail = this.getCollectionDetailString(
-      'Membros ativos',
-      this.activeMembers
-    )
+    let membersDetail = ''
+
+    if (this.activeMembers.size != 0)
+      membersDetail += this.getCollectionDetailString(
+        'Membros ativos',
+        this.activeMembers
+      )
 
     if (this.reservedPlaces.size != 0)
       membersDetail += this.getCollectionDetailString(
@@ -62,10 +65,10 @@ export default class Group {
         this.bannedMembers
       )
 
-    return `**ID do canal:** ${this.channelId}\n**Grupo:** ${this.id}-${this.game.toLocaleUpperCase()} \n**Quantidade jogadores:** ${this.activeMembers.size}/${this.memberQuantityAllowed}\n${membersDetail}`
+    return `**ID do canal:** ${this.channelId}\n**Grupo:** ${this.id}-${this.name} \n**Quantidade jogadores:** ${this.activeMembers.size}/${this.memberQuantityAllowed}\n${membersDetail}`
   }
 
   toString() {
-    return `\`\`\`ID do canal | ${this.channelId}\nID do grupo | ${this.id}\n   Líder    | ${this.leaderName}\n  Jogando   | ${this.game}\nMembros max | ${this.memberQuantityAllowed}\`\`\``
+    return `\`\`\`ID do canal | ${this.channelId}\nID do grupo | ${this.id}\n   Nome     | ${this.name}\n   Líder    | ${this.leaderName}\nMembros max | ${this.memberQuantityAllowed}\`\`\``
   }
 }

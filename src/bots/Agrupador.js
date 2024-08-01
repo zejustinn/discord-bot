@@ -78,7 +78,6 @@ export default class Agrupador {
 
   setBotVoiceStateUpdateListener() {
     this.client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
-      // Permitir ingressar a grupos apenas se vier do GROUP_WAITING_VOICE_CHANNEL_ID
       try {
         const user = await newState.guild.members.fetch(newState.id)
         if (oldState.channelId) {
@@ -122,11 +121,7 @@ export default class Agrupador {
                 (group) => group.channelId == newChannel.id
               )
 
-              if (
-                group &&
-                !group.activeMembers.has(user.id) &&
-                !group.reservedPlaces.has(user.id)
-              ) {
+              if (group && !group.activeMembers.has(user.id)) {
                 const waitingChannel = await newState.guild.channels.fetch(
                   GROUP_WAITING_VOICE_CHANNEL_ID
                 )
